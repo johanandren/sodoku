@@ -1,3 +1,7 @@
+package markatta
+
+import scala.annotation.tailrec
+
 
 object Solver {
 
@@ -13,7 +17,8 @@ object Solver {
       val coords = emptyLeft.head
       start.validValuesForCell(coords)
         .toStream
-        .map(value => solve(start.put(coords, value))).collectFirst {
+        .map(value => solve(start.put(coords, value)))
+        .collectFirst {
           case Some(solution) => solution
         }
 
@@ -30,9 +35,13 @@ object Solver {
       val coords = emptyLeft.head
       start.validValuesForCell(coords)
         .par
-        .map(value => solve(start.put(coords, value)))
-        .find(_.isDefined)
+        .map { value =>
+          val nextBoard = start.put(coords, value)
+          // just multithread first recursion
+          parallelSolve(nextBoard)
+        }.find(_.isDefined)
         .map(_.get)
+
 
     }
   }

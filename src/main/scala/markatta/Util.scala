@@ -1,3 +1,5 @@
+package markatta
+
 import scala.collection.immutable.NumericRange
 
 object Util {

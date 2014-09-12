@@ -1,4 +1,6 @@
-import Util.timeS
+package markatta
+
+import markatta.Util.timeS
 
 object Main extends App {
 
