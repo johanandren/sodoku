@@ -17,7 +17,7 @@ class Board(slots: Map[Coord, Byte] = Map()) {
 
   import markatta.Util.range
 
-  private val across = range(0, 8)
+  private val across = range(0, 8).toArray
 
   def put(coords: Coord, value: Byte): Board = new Board(slots + (coords ->  value))
 
@@ -60,10 +60,10 @@ class Board(slots: Map[Coord, Byte] = Map()) {
 
 
   private val allBlocks =
-    for {
+    (for {
       x <- range(0, 2)
       y <- range(0, 2)
-    } yield Coord(x, y)
+    } yield Coord(x, y)).toArray
 
   /**
    * @param coords block column and row 0 - 2
