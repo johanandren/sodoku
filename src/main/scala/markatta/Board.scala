@@ -1,14 +1,13 @@
 package markatta
 
-import markatta.Board.Coord
+/** (col, row) */
+case class Coord(x: Byte, y: Byte)
 
 object Board {
 
-  /** (col, row) */
-  type Coord = (Byte, Byte)
 
   def apply(prefilled: ((Int, Int), Int)*): Board =
-    new Board(prefilled.map { case ((x, y), value) => (x.toByte, y.toByte) -> value.toByte }.toMap)
+    new Board(prefilled.map { case ((x, y), value) => Coord(x.toByte, y.toByte) -> value.toByte }.toMap)
 }
 
 /**
@@ -20,42 +19,34 @@ class Board(slots: Map[Coord, Byte] = Map()) {
 
   private val across = range(0, 8)
 
-  def put(coords: Coord, value: Byte): Board =
-    new Board(slots + (coords ->  value))
+  def put(coords: Coord, value: Byte): Board = new Board(slots + (coords ->  value))
 
-  def get(x: Byte, y: Byte): Option[Byte] =
-    slots.get((x, y))
+  def empty(coord: Coord): Boolean = !hasValue(coord)
 
-  def empty(x: Byte, y: Byte): Boolean =
-    empty((x, y))
-
-  def empty(coord: Coord): Boolean =
-    !slots.contains(coord)
+  def hasValue(coord: Coord): Boolean = slots.contains(coord)
 
   private val allCoords =
     for {
       x <- across
       y <- across
-    } yield (x, y)
+    } yield Coord(x, y)
 
   def emptyCoordinates: Seq[Coord] =
     allCoords.foldLeft( Set[Coord]()) { (set, coord) =>
       if (empty(coord)) set + coord
       else set
-    }.toSeq.sorted
+    }.toSeq.sortBy(c => c.x * 10 + c.y)
 
   private val all = range(1, 9).toSet
   def validValuesForCell(coords: Coord): Set[Byte] = {
     if (slots.contains(coords)) Set()
     else {
-      val (x, y) = coords
-      all -- column(x).toSet -- row(y).toSet -- block(blockCoords(x), blockCoords(y)).values.toSet
+      all --
+        column(coords.x).toSet --
+        row(coords.y).toSet --
+        block(Coord(blockCoords(coords.x), blockCoords(coords.y))).values.toSet
     }
   }
-
-
-  def hasValue(x: Byte, y: Byte): Boolean =
-    slots.contains((x, y))
 
   def valid = {
     def columnsAndRowsUnique =
@@ -72,7 +63,7 @@ class Board(slots: Map[Coord, Byte] = Map()) {
     for {
       x <- range(0, 2)
       y <- range(0, 2)
-    } yield (x, y)
+    } yield Coord(x, y)
 
   /**
    * @param coords block column and row 0 - 2
@@ -80,11 +71,11 @@ class Board(slots: Map[Coord, Byte] = Map()) {
    */
   def block(coords: Coord): Map[Coord, Byte] = {
     allBlocks.foldLeft(Map[Coord, Byte]()) { (map: Map[Coord, Byte], cellCoord: Coord) =>
-      val (cellX, cellY) = cellCoord
-      val (x, y) = coords
-      val actualCoord = ((x * 3.toByte + cellX).toByte, (y * 3.toByte + cellY).toByte)
-      slots.get(actualCoord).fold(map
-      )(value => map + (cellCoord -> value))
+      val Coord(cellX, cellY) = cellCoord
+      val Coord(x, y) = coords
+      val actualCoord = Coord((x * 3.toByte + cellX).toByte, (y * 3.toByte + cellY).toByte)
+      slots.get(actualCoord)
+        .fold(map)(value => map + (cellCoord -> value))
     }
   }
 
@@ -97,13 +88,13 @@ class Board(slots: Map[Coord, Byte] = Map()) {
 
   def row(y: Byte): IndexedSeq[Byte] =
     across.foldLeft(IndexedSeq[Byte]()) { (acc, x) =>
-      val coord = (x, y)
+      val coord = Coord(x, y)
       slots.get(coord).fold(acc)(value => acc :+ value)
     }
 
   def column(x: Byte): IndexedSeq[Byte] =
     across.foldLeft(IndexedSeq[Byte]()) { (acc, y) =>
-      val coord = (x, y)
+      val coord = Coord(x, y)
       slots.get(coord).fold(acc)(value => acc :+ value)
     }
 
@@ -112,7 +103,7 @@ class Board(slots: Map[Coord, Byte] = Map()) {
     val horizLine = "x---x---x---x\n"
     def drawRow(y: Byte): Unit = {
       def drawCell(x: Byte): Unit = {
-        builder ++= slots.get((x, y)).map(_.toString).getOrElse(" ")
+        builder ++= slots.get(Coord(x, y)).map(_.toString).getOrElse(" ")
       }
       builder += '|'
       range(0, 2).foreach(drawCell)
@@ -134,5 +125,3 @@ class Board(slots: Map[Coord, Byte] = Map()) {
   }
 
 }
-
-class BigCell(slots: IndexedSeq[IndexedSeq[Option[Byte]]])
