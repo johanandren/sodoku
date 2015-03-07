@@ -5,7 +5,6 @@ case class Coord(x: Byte, y: Byte)
 
 object Board {
 
-
   def apply(prefilled: ((Int, Int), Int)*): Board =
     new Board(prefilled.map { case ((x, y), value) => Coord(x.toByte, y.toByte) -> value.toByte }.toMap)
 }

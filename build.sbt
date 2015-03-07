@@ -7,3 +7,4 @@ scalaVersion := "2.11.2"
 // javaOptions in run ++= Seq("-Xmx20M")
 
 fork := true
+
