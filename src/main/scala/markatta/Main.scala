@@ -37,12 +37,11 @@ object Main extends App {
   )
 
   println(hardestSodokuEver)
-  val (result, s) = timeS(Solver.parallelSolve(hardestSodokuEver))
+
+  val (result, s) = timeS(Solver.solve(hardestSodokuEver))
 
   result.fold(
     println(s"Couldn't solve it in $s s :(")
   )(solved => println(s"Solved it in $s s:\n\n" + solved))
-
-
 
 }

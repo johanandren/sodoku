@@ -1,12 +1,35 @@
 package markatta
 
+import Util._
+
 /** (col, row) */
-case class Coord(x: Byte, y: Byte)
+case class Coord(x: Byte, y: Byte) {
+
+  val blockNo = x / 3 + (y / 3 * 3)
+
+}
 
 object Board {
 
   def apply(prefilled: ((Int, Int), Int)*): Board =
     new Board(prefilled.map { case ((x, y), value) => Coord(x.toByte, y.toByte) -> value.toByte }.toMap)
+
+  private[Board] val across = range(0, 8)
+
+  // array but for optimization reasons, so think of it as immutable
+  private[Board] val allCoords =
+    for {
+      x <- across
+      y <- across
+    } yield Coord(x, y)
+  val all = range(1, 9).toSet
+
+  // array but for optimization reasons, so think of it as immutable
+  private[Board] val allBlocks: Array[Coord] =
+    (for {
+      x <- range(0, 2)
+      y <- range(0, 2)
+    } yield Coord(x, y)).toArray
 }
 
 /**
@@ -14,88 +37,53 @@ object Board {
  */
 class Board(slots: Map[Coord, Byte] = Map()) {
 
-  import markatta.Util.range
-
-  private val across = range(0, 8).toArray
+  import Board._
 
   def put(coords: Coord, value: Byte): Board = new Board(slots + (coords ->  value))
 
-  def empty(coord: Coord): Boolean = !hasValue(coord)
+  def empty(coord: Coord): Boolean = !slots.contains(coord)
 
-  def hasValue(coord: Coord): Boolean = slots.contains(coord)
-
-  private val allCoords =
-    for {
-      x <- across
-      y <- across
-    } yield Coord(x, y)
-
+  // TODO sort these so that the ones with only one empty slot left will get prioritized
   def emptyCoordinates: Seq[Coord] =
-    allCoords.foldLeft( Set[Coord]()) { (set, coord) =>
-      if (empty(coord)) set + coord
-      else set
-    }.toSeq.sortBy(c => c.x * 10 + c.y)
+    allCoords.filterNot(slots.contains)
 
-  private val all = range(1, 9).toSet
   def validValuesForCell(coords: Coord): Set[Byte] = {
-    if (slots.contains(coords)) Set()
-    else {
-      all --
-        column(coords.x).toSet --
-        row(coords.y).toSet --
-        block(Coord(blockCoords(coords.x), blockCoords(coords.y))).values.toSet
-    }
+    if (slots.contains(coords)) Set.empty[Byte]
+    else all -- usedNumbers(coords)
   }
+
+  def usedNumbers(coords: Coord): Set[Byte] =
+    slots.collect {
+      // dianas clever solution to only pass the values once
+      case (c @ Coord(x, y), value) if coords.x == x || coords.y == y || coords.blockNo == c.blockNo => value
+    }.toSet
+
 
   def valid = {
     def columnsAndRowsUnique =
       across.forall(pos => sequenceValid(row(pos)) && sequenceValid(column(pos)))
 
     def blocksUnique =
-      allBlocks.forall(coords => blockValid(block(coords)))
+      allBlocks.forall(coords => blockValid(block(coords.blockNo)))
 
     columnsAndRowsUnique && blocksUnique
   }
 
-
-  private val allBlocks =
-    (for {
-      x <- range(0, 2)
-      y <- range(0, 2)
-    } yield Coord(x, y)).toArray
-
   /**
-   * @param coords block column and row 0 - 2
    * @return A 0-2x0-2 subblock of the board
    */
-  def block(coords: Coord): Map[Coord, Byte] = {
-    allBlocks.foldLeft(Map[Coord, Byte]()) { (map: Map[Coord, Byte], cellCoord: Coord) =>
-      val Coord(cellX, cellY) = cellCoord
-      val Coord(x, y) = coords
-      val actualCoord = Coord((x * 3.toByte + cellX).toByte, (y * 3.toByte + cellY).toByte)
-      slots.get(actualCoord)
-        .fold(map)(value => map + (cellCoord -> value))
-    }
-  }
-
-  def blockCoords(coord: Byte): Byte = (coord / 3).toByte
-
+  def block(blockNo: Int): Map[Coord, Byte] =
+    slots.filter(t => t._1.blockNo == blockNo)
 
   def blockValid(block: Map[Coord, Byte]): Boolean = sequenceValid(block.values)
 
   def sequenceValid(sequence: Iterable[Byte]): Boolean = sequence.size == sequence.toSet.size
 
-  def row(y: Byte): IndexedSeq[Byte] =
-    across.foldLeft(IndexedSeq[Byte]()) { (acc, x) =>
-      val coord = Coord(x, y)
-      slots.get(coord).fold(acc)(value => acc :+ value)
-    }
+  def row(y: Byte): Seq[Byte] =
+    slots.collect { case (c, value) if c.y == y => value }.toSeq
 
-  def column(x: Byte): IndexedSeq[Byte] =
-    across.foldLeft(IndexedSeq[Byte]()) { (acc, y) =>
-      val coord = Coord(x, y)
-      slots.get(coord).fold(acc)(value => acc :+ value)
-    }
+  def column(x: Byte): Seq[Byte] =
+    slots.collect { case (c, value) if c.x == x => value }.toSeq
 
   override def toString = {
     val builder = StringBuilder.newBuilder
