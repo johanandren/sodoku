@@ -22,7 +22,7 @@ object Board {
       x <- across
       y <- across
     } yield Coord(x, y)
-  val all = range(1, 9).toSet
+  val allValues = range(1, 9).toSet
 
   // array but for optimization reasons, so think of it as immutable
   private[Board] val allBlocks: Array[Coord] =
@@ -42,14 +42,14 @@ class Board(slots: Map[Coord, Byte] = Map()) {
   def put(coords: Coord, value: Byte): Board = new Board(slots + (coords ->  value))
 
   def empty(coord: Coord): Boolean = !slots.contains(coord)
-
+  
   // TODO sort these so that the ones with only one empty slot left will get prioritized
   def emptyCoordinates: Seq[Coord] =
     allCoords.filterNot(slots.contains)
 
   def validValuesForCell(coords: Coord): Set[Byte] = {
     if (slots.contains(coords)) Set.empty[Byte]
-    else all -- usedNumbers(coords)
+    else allValues -- usedNumbers(coords)
   }
 
   def usedNumbers(coords: Coord): Set[Byte] =
@@ -59,7 +59,7 @@ class Board(slots: Map[Coord, Byte] = Map()) {
     }.toSet
 
 
-  def valid = {
+  lazy val valid = {
     def columnsAndRowsUnique =
       across.forall(pos => sequenceValid(row(pos)) && sequenceValid(column(pos)))
 
@@ -69,11 +69,7 @@ class Board(slots: Map[Coord, Byte] = Map()) {
     columnsAndRowsUnique && blocksUnique
   }
 
-  /**
-   * @return A 0-2x0-2 subblock of the board
-   */
-  def block(blockNo: Int): Map[Coord, Byte] =
-    slots.filter(t => t._1.blockNo == blockNo)
+  def block(blockNo: Int): Map[Coord, Byte] = slots.filter(t => t._1.blockNo == blockNo)
 
   def blockValid(block: Map[Coord, Byte]): Boolean = sequenceValid(block.values)
 
